@@ -32,7 +32,12 @@ public class AuthFilter extends OncePerRequestFilter {
         if (HttpMethod.OPTIONS.matches(method)) {
             return true;
         }
-        if (path.startsWith("/health/") || path.startsWith("/actuator")) {
+        if (path.startsWith("/health/")
+                || path.startsWith("/actuator")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || "/swagger-ui.html".equals(path)
+                || path.startsWith("/webjars/")) {
             return true;
         }
         if (HttpMethod.GET.matches(method) && path.startsWith("/shows")) {

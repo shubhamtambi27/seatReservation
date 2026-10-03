@@ -155,6 +155,16 @@ class SeatReservationApplicationTests {
         assertThat(metrics).contains("seats_available");
     }
 
+    @Test
+    void swaggerIsPublic() throws Exception {
+        assertThat(get("/v3/api-docs").statusCode()).isEqualTo(200);
+        String spec = get("/v3/api-docs").body();
+        assertThat(spec).contains("Seat Reservation");
+        assertThat(spec).contains("/shows/{id}/reserve");
+        assertThat(get("/swagger-ui.html").statusCode()).isIn(200, 302);
+        assertThat(get("/swagger-ui/index.html").statusCode()).isEqualTo(200);
+    }
+
     private Outcome storm(int n, RequestFactory factory) throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(n);
         CountDownLatch start = new CountDownLatch(1);

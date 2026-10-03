@@ -95,6 +95,8 @@ Per-seat `available` / `held` / `confirmed` plus counts. Invariant: `available +
 | `GET /actuator/health/liveness` | Spring liveness |
 | `GET /actuator/health/readiness` | Spring readiness including `db` |
 | `GET /actuator/prometheus` | Prometheus scrape |
+| `GET /swagger-ui.html` | Swagger UI (Bearer authorize) |
+| `GET /v3/api-docs` | OpenAPI 3 JSON |
 
 Metrics (names as scraped):
 

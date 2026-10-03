@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -163,6 +164,47 @@ class SeatReservationApplicationTests {
         assertThat(spec).contains("/shows/{id}/reserve");
         assertThat(get("/swagger-ui.html").statusCode()).isIn(200, 302);
         assertThat(get("/swagger-ui/index.html").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void createShowRequiresAdminToken() throws Exception {
+        HttpResponse<String> forbidden = post(
+                "/shows",
+                "not-admin",
+                Map.of("name", "x", "seats", List.of("A1"), "price_paise", 1));
+        assertThat(forbidden.statusCode()).isEqualTo(403);
+
+        HttpRequest missing = HttpRequest.newBuilder(URI.create(base() + "/shows"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"name\":\"x\",\"seats\":[\"A1\"],\"price_paise\":1}"))
+                .build();
+        assertThat(http.send(missing, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void reserveValidatesSeatsAndIdempotency() throws Exception {
+        HttpResponse<String> unknown = reserve("user", List.of("NOPE"), "k-unknown");
+        assertThat(unknown.statusCode()).isEqualTo(400);
+        assertThat(mapper.readTree(unknown.body()).get("error").asText()).isEqualTo("unknown_seat");
+
+        HttpResponse<String> missingKey = post(
+                "/shows/" + showId + "/reserve",
+                "user",
+                Map.of("seats", List.of("A1")));
+        assertThat(missingKey.statusCode()).isEqualTo(400);
+
+        HttpResponse<String> twoSeats = reserve("gina", List.of("A1", "A2"), "two");
+        assertThat(twoSeats.statusCode()).isEqualTo(201);
+        assertThat(mapper.readTree(twoSeats.body()).get("amount_paise").asLong()).isEqualTo(50000);
+        assertReconciled();
+    }
+
+    @Test
+    void unknownShowAndReservationAre404() throws Exception {
+        UUID missing = UUID.randomUUID();
+        assertThat(get("/shows/" + missing).statusCode()).isEqualTo(404);
+        HttpResponse<String> cancel = post("/reservations/" + missing + "/cancel", "erin", Map.of());
+        assertThat(cancel.statusCode()).isEqualTo(404);
     }
 
     private Outcome storm(int n, RequestFactory factory) throws Exception {
